@@ -1,19 +1,24 @@
 {
-  "name": "knowitall-bot",
-  "version": "1.0.0",
-  "description": "Discord bot that can help answer questions using a locally hosted LLM.",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/galvin-SH/knowitall-bot.git"
-  },
-  "author": "Matthew Galvin",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/galvin-SH/knowitall-bot/issues"
-  },
-  "homepage": "https://github.com/galvin-SH/knowitall-bot#readme"
+    "name": "knowitall-bot",
+    "version": "1.0.0",
+    "description": "Discord bot that can help answer questions using a locally hosted LLM.",
+    "main": "src/index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "start": "node src/index.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/galvin-SH/knowitall-bot.git"
+    },
+    "author": "Matthew Galvin",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/galvin-SH/knowitall-bot/issues"
+    },
+    "homepage": "https://github.com/galvin-SH/knowitall-bot#readme",
+    "dependencies": {
+        "discord.js": "^14.15.2",
+        "dotenv": "^16.4.5"
+    }
 }
