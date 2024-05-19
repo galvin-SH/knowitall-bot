@@ -1,5 +1,6 @@
 require('dotenv').config();
 const client = require('./client').getClient();
+const ollama = require('./connection').getOllama();
 const { Events } = require('discord.js');
 
 // Listen for the ready event
@@ -19,6 +20,9 @@ client.on(Events.MessageCreate, async (message) => {
 async function main() {
     // Log in to Discord with the client
     await client.login(process.env.DISCORD_TOKEN);
+    // Connect to the Ollama server
+    await ollama;
+    console.log('Connected to the Ollama server!');
 }
 
 main().catch(console.error);

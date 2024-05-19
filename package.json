@@ -19,6 +19,7 @@
     "homepage": "https://github.com/galvin-SH/knowitall-bot#readme",
     "dependencies": {
         "discord.js": "^14.15.2",
-        "dotenv": "^16.4.5"
+        "dotenv": "^16.4.5",
+        "ollama": "^0.5.1"
     }
 }
