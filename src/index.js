@@ -11,16 +11,31 @@ client.on(Events.ClientReady, () => {
 
 // Listen for the messageCreate event
 client.on(Events.MessageCreate, async (message) => {
-    // Ignore messages from bots and messages that don't mention the client
-    if (message.author.bot || !message.mentions.has(client.user)) return;
-    // Send a request to the Ollama server
-    console.log('Sending request to Ollama server...');
-    console.log(`User: ${message.content}`);
-    const response = await sendRequest(ollama, message.content);
-    // Send the response from the Ollama server
-    console.log('Received response from Ollama server!');
-    console.log(`Bot: ${response.message.content}`);
-    await message.reply(response.message.content);
+    try {
+        // Ignore messages from bots and messages that don't mention the client
+        if (message.author.bot || !message.mentions.has(client.user)) return;
+        // Send a request to the Ollama server
+        console.log('Sending request to Ollama server...');
+        console.log(`User: ${message.content}`);
+        const response = await sendRequest(ollama, message.content);
+        // Send the response from the Ollama server
+        console.log('Received response from Ollama server!');
+        console.log(`Bot: ${response.message.content}`);
+        // If message is longer than 2000 characters, send it in chunks
+        if (response.message.content.length > 1950) {
+            const chunks = response.message.content.match(/[\s\S]{1,1950}/g);
+            for (const chunk of chunks) {
+                await message.reply(
+                    chunk + ` (${chunks.indexOf(chunk) + 1}/${chunks.length})`
+                );
+            }
+            return;
+        }
+        // Send the response to the user
+        await message.reply(response.message.content);
+    } catch (error) {
+        console.error(error);
+    }
 });
 
 // Define an async function to start the bot
@@ -32,7 +47,7 @@ async function main() {
         ? console.log('Connected to the Ollama server!')
         : console.error('Failed to connect to the Ollama server!');
     const response = await ollama.generate({
-        model: 'llama3:latest',
+        model: 'gemma:latest',
         format: 'json',
     });
     console.log(`${await response.model} loaded successfully!`);
