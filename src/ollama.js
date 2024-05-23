@@ -1,4 +1,5 @@
 const { Ollama } = require('ollama');
+const { getContext, addContext } = require('./context');
 
 module.exports = {
     // Create a new Ollama instance
@@ -11,27 +12,16 @@ module.exports = {
         }
     },
     // Send a request to the Ollama server
-    async sendRequest(ollama, text) {
+    async sendRequest(ollama, context) {
         try {
-            const MENTION_REGEX = /(<+@)+[0-9]+>/g;
-            const userMessage = text.replaceAll(MENTION_REGEX, '');
-            // Check if the message is empty
-            if (userMessage === '')
-                return { message: { content: 'Please provide a message.' } };
+            // Get the context if it's not provided
+            if (!context) context = await getContext();
             // Send a request to the Ollama server
             return await ollama.chat({
                 // Set the model
-                model: 'gemma:latest',
+                model: process.env.OLLAMA_MODEL,
                 // Set the context
-                messages: [
-                    {
-                        // Set the user role and message content
-                        role: 'user',
-                        content: userMessage,
-                    },
-                ],
-                // Disable streaming
-                stream: false,
+                messages: context,
             });
         } catch (error) {
             console.error(error);
