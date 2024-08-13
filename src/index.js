@@ -23,20 +23,39 @@ client.on(Events.MessageCreate, async (message) => {
         // Add the message to the context
         await addContext(context, {
             role: 'user',
-            content: content,
+            content:
+                content +
+                `. The message you are responding to was sent by user: (${message.author.username})`,
         });
         // Send a request to the Ollama server
         const response = await sendRequest(ollama, context);
-        // Add the response to the context
+
+        // Add the response to the context window for the model to keep track of the conversation
         await addContext(context, response.message);
-        // Bot replies to the message with the response
-        // Split the response into chunks of 1950 characters or less
-        // and send each chunk as a separate message
-        // to avoid the 2000 character limit
-        const chunks = response.message.content.match(/[\s\S]{1,1950}\W|\w+$/g);
-        for (const chunk of chunks) {
+
+        // Define a variable to store the bot message and an array to store the bot messages if the message is too long
+        // Clean up the response by trimming whitespace
+        let botMessage = response.message.content.trim();
+        const botMessages = [];
+
+        // If the response is empty, set the bot message to a default message
+        if (!botMessage) botMessage = 'Sorry, something went wrong on my end!';
+
+        // If the message is longer than 1950 characters, find the next space and split it
+        while (botMessage.length > 1950) {
+            let lastSpace = botMessage.lastIndexOf(' ', 1950);
+            botMessages.push(botMessage.substring(0, lastSpace));
+            botMessage = botMessage.substring(lastSpace + 1);
+        }
+        // Push the remaining message to the array
+        botMessages.push(botMessage);
+
+        // Send the bot messages to the channel
+        // Add the index of the message to the message
+        // to keep track of the message count
+        for (const msg of botMessages) {
             await message.reply(
-                `${chunk} (${chunks.indexOf(chunk) + 1}/${chunks.length})`
+                `${msg} (${botMessages.indexOf(msg) + 1}/${botMessages.length})`
             );
         }
     } catch (error) {

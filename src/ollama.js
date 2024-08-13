@@ -22,6 +22,8 @@ module.exports = {
                 model: process.env.OLLAMA_MODEL,
                 // Set the context
                 messages: context,
+                // Model waits to respond until its whole message has been created
+                stream: false,
             });
         } catch (error) {
             console.error(error);
