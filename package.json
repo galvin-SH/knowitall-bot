@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "description": "Discord bot that can help answer questions using a locally hosted LLM.",
     "main": "src/index.js",
+    "type": "module",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "start": "node src/index.js"
@@ -18,8 +19,13 @@
     },
     "homepage": "https://github.com/galvin-SH/knowitall-bot#readme",
     "dependencies": {
-        "discord.js": "^14.15.2",
+        "@discordjs/voice": "^0.17.0",
+        "discord.js": "^14.15.3",
         "dotenv": "^16.4.5",
+        "libsodium-wrappers": "^0.7.15",
         "ollama": "^0.5.1"
+    },
+    "devDependencies": {
+        "@gradio/client": "^1.5.0"
     }
 }

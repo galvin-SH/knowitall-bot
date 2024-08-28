@@ -1,19 +1,17 @@
-const {
-    Client,
-    IntentsBitField: { Flags: IntentsFlags },
-} = require('discord.js');
+import { Client, IntentsBitField } from 'discord.js';
 
-module.exports = {
-    // Create a new client instance
-    getClient() {
-        try {
-            return new Client({
-                // Enable the required gateway intents
-                // https://discord.com/developers/docs/topics/gateway#gateway-intents
-                intents: [IntentsFlags.Guilds, IntentsFlags.GuildMessages],
-            });
-        } catch (error) {
-            console.error(error);
-        }
-    },
-};
+export function getClient() {
+    try {
+        return new Client({
+            // Enable the required gateway intents
+            // https://discord.com/developers/docs/topics/gateway#gateway-intents
+            intents: [
+                IntentsBitField.Flags.Guilds,
+                IntentsBitField.Flags.GuildMessages,
+                IntentsBitField.Flags.GuildVoiceStates,
+            ],
+        });
+    } catch (error) {
+        console.error(error);
+    }
+}

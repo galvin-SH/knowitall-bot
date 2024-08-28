@@ -1,10 +1,20 @@
-require('dotenv').config();
-const client = require('./client').getClient();
-const ollama = require('./ollama').getOllama();
-const context = require('./context').getContext();
-const { addContext } = require('./context');
-const { sendRequest } = require('./ollama');
-const { Events } = require('discord.js');
+import 'dotenv/config.js';
+import { getClient } from './client.js';
+import { getOllama, sendRequest } from './ollama.js';
+import { getContext, addContext } from './context.js';
+import { getConnection } from './voiceConnection.js';
+import { Events } from 'discord.js';
+import {
+    createAudioPlayer,
+    createAudioResource,
+    StreamType,
+    NoSubscriberBehavior,
+} from '@discordjs/voice';
+import { generateTTS } from './gradio.js';
+
+const client = getClient();
+const ollama = getOllama();
+const context = getContext();
 
 // Listen for the ready event
 client.on(Events.ClientReady, () => {
@@ -20,12 +30,12 @@ client.on(Events.MessageCreate, async (message) => {
         if (message.author.bot || !message.mentions.has(client.user)) return;
         // Remove the mention from the message content
         const content = await message.content.replace(MENTION_REGEX, '');
+        if (!content.trim()) return;
+
         // Add the message to the context
         await addContext(context, {
             role: 'user',
-            content:
-                content +
-                `. The message you are responding to was sent by user: (${message.author.username})`,
+            content: `${message.author.username} said: "${content}"`,
         });
         // Send a request to the Ollama server
         const response = await sendRequest(ollama, context);
@@ -40,6 +50,41 @@ client.on(Events.MessageCreate, async (message) => {
 
         // If the response is empty, set the bot message to a default message
         if (!botMessage) botMessage = 'Sorry, something went wrong on my end!';
+
+        // Connect to the voice channel
+        const connection = getConnection(
+            client,
+            process.env.DISCORD_GUILD_ID,
+            process.env.DISCORD_CHANNEL_ID
+        );
+        (await connection)
+            ? console.log('Connected to the voice channel!')
+            : console.error('Failed to connect to the voice channel!');
+        // Create an audio player
+        const player = createAudioPlayer({
+            behaviors: {
+                noSubscriber: NoSubscriberBehavior.Play,
+            },
+        });
+        // Generate the TTS audio
+        await generateTTS(botMessage, process.env.VOICE_MODEL);
+        // Create an audio resource
+        const resource = createAudioResource(
+            'C:/Users/matth/Applio/Applio-3.2.3/assets/audios/tts_rvc_output.wav',
+            {
+                inputType: StreamType.Arbitrary,
+            }
+        );
+        // Play the audio resource
+        player.play(resource);
+        // Subscribe the player to the connection
+        connection.subscribe(player);
+        // Listen for the audio player state change
+        player.on('stateChange', (oldState, newState) => {
+            console.log(
+                `Audio player transitioned from ${oldState.status} to ${newState.status}`
+            );
+        });
 
         // If the message is longer than 1950 characters, find the next space and split it
         while (botMessage.length > 1950) {
@@ -58,6 +103,7 @@ client.on(Events.MessageCreate, async (message) => {
                 `${msg} (${botMessages.indexOf(msg) + 1}/${botMessages.length})`
             );
         }
+        (await player.state.status) === 'idle';
     } catch (error) {
         console.error(error);
     }
@@ -71,7 +117,7 @@ async function main() {
     (await ollama)
         ? console.log('Connected to the Ollama server!')
         : console.error('Failed to connect to the Ollama server!');
-    // Generate a response from the model to load it into memory
+    // Generate an empty response from the model to load it into memory
     (await ollama.generate({
         model: process.env.OLLAMA_MODEL,
         keep_alive: 600000,
