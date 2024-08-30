@@ -68,6 +68,37 @@ export async function generateTTS(text, voice) {
             });
             break;
 
+        case 'trump':
+            await app.predict('/run_tts_script', {
+                tts_text: text,
+                tts_voice: 'en-US-AndrewMultilingualNeural',
+                tts_rate: 0,
+                pitch: 0,
+                filter_radius: 3,
+                index_rate: 0.75,
+                volume_envelope: 1,
+                protect: 0.426,
+                hop_length: 458,
+                f0_method: 'rmvpe',
+                output_tts_path:
+                    'C:\\Users\\matth\\Applio\\Applio-3.2.3\\assets\\audios\\tts_output.wav',
+                output_rvc_path:
+                    'C:\\Users\\matth\\Applio\\Applio-3.2.3\\assets\\audios\\tts_rvc_output.wav',
+                pth_path: 'logs\\Trump\\Trump_e160_s7520.pth',
+                index_path:
+                    'logs\\Trump.index\\added_IVF1377_Flat_nprobe_1_Trump_v2.index',
+                split_audio: false,
+                f0_autotune: false,
+                clean_audio: true,
+                clean_strength: 0.5,
+                export_format: 'WAV',
+                upscale_audio: false,
+                f0_file: None,
+                embedder_model: 'contentvec',
+                embedder_model_custom: None,
+            });
+            break;
+
         default:
             console.log('Voice not found');
     }
