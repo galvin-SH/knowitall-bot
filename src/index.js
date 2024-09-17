@@ -1,3 +1,5 @@
+// Define the main entry point for the bot
+// Import the necessary modules and load environment variables
 import 'dotenv/config.js';
 import { getClient } from './client.js';
 import { getOllama, sendRequest } from './ollama.js';
@@ -12,12 +14,14 @@ import {
 } from '@discordjs/voice';
 import { generateTTS } from './gradio.js';
 
+// Define the client, Ollama, and context instances
 const client = getClient();
 const ollama = getOllama();
 const context = getContext();
 
-// Listen for the ready event
+// Listen for the ClientReady event
 client.on(Events.ClientReady, () => {
+    // Log the client user's display name to confirm the bot is logged in
     console.log(`Logged in as ${client.user.displayName}!`);
 });
 
@@ -29,10 +33,17 @@ client.on(Events.MessageCreate, async (message) => {
         // Ignore messages from bots and messages that don't mention the client
         if (message.author.bot || !message.mentions.has(client.user)) return;
         // if the message was sent by a user not currently in the bots voice channel, return
-        if (message.member.voice.channel.id !== process.env.DISCORD_CHANNEL_ID)
-            return message.reply(
-                'Please join the voice channel that I am currently in to use this command!'
-            );
+        // unless the user is the bot owner
+        while (message.author.id !== '179088203263770624') {
+            if (
+                // Check if the message author is in the voice channel
+                message.member.voice.channel.id !==
+                process.env.DISCORD_CHANNEL_ID
+            )
+                return message.reply(
+                    'Please join the voice channel that I am currently in to use this command!'
+                );
+        }
         // Remove the mention from the message content
         const content = await message.content.replace(MENTION_REGEX, '');
         if (!content.trim()) return;
