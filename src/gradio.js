@@ -2,8 +2,8 @@ import { Client } from '@gradio/client';
 
 export async function generateTTS(text, voice) {
     const app = await Client.connect('http://127.0.0.1:6969/');
-    const ttsPrompt = text.replace(/[\*\n]/g, '');
-    let None = null;
+    const ttsPrompt = text.replace(/[*\n]/g, '');
+    const None = null;
 
     // Send a request to the TTS server
     switch (voice) {

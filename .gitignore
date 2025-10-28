@@ -129,5 +129,26 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+# IDE and editor folders
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Audio output files
+*.wav
+tts_output.wav
+tts_rvc_output.wav
+
+# Local configuration
+config.local.js
+config.local.json
+
 #Other
 notes.txt
+.claude/settings.local.json

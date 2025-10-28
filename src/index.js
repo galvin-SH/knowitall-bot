@@ -120,7 +120,6 @@ client.on(Events.MessageCreate, async (message) => {
                 `${msg} (${botMessages.indexOf(msg) + 1}/${botMessages.length})`
             );
         }
-        (await player.state.status) === 'idle';
     } catch (error) {
         console.error(error);
     }

@@ -6,7 +6,9 @@
     "type": "module",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "start": "node src/index.js"
+        "start": "node src/index.js",
+        "lint": "eslint src/**/*.js",
+        "lint:fix": "eslint src/**/*.js --fix"
     },
     "repository": {
         "type": "git",
@@ -26,6 +28,7 @@
         "ollama": "^0.5.1"
     },
     "devDependencies": {
-        "@gradio/client": "^1.5.0"
+        "@gradio/client": "^1.5.0",
+        "eslint": "^9.38.0"
     }
 }

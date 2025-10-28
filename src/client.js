@@ -9,6 +9,7 @@ export function getClient() {
                 IntentsBitField.Flags.Guilds,
                 IntentsBitField.Flags.GuildMessages,
                 IntentsBitField.Flags.GuildVoiceStates,
+                IntentsBitField.Flags.MessageContent,
             ],
         });
     } catch (error) {
