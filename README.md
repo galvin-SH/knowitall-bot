@@ -1,68 +1,194 @@
 # knowitall-bot
+
 ![MIT License](https://img.shields.io/badge/License-MIT%20License-blue)
+
 ## Description
-A Discord bot which which allows users to interact with a locally hosted LLM and recieve both text and audio responses to their prompts.
+
+A Discord bot that allows users to interact with a locally hosted LLM and receive both text and audio responses to their prompts. The bot uses RVC (Retrieval-based Voice Conversion) to generate character voices for text-to-speech output.
 
 ## Table of Contents
 
-- [Installation and Usage](#installation)
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Project Structure](#project-structure)
 - [License](#license)
-- [How to Contribute](#contributing)
-- [Tests](#tests)
+- [Contributing](#contributing)
 - [Questions](#questions)
 
-## Installation and Usage
-This project is intended to interface with a locally hosted LLM via Ollama which can be found at the following link
-- https://ollama.com/download
+## Features
 
-Full documentation for Ollama and the API this app interfaces with can be found at the following link
-- https://github.com/ollama/ollama/tree/main/docs
+- **Local LLM Integration** - Connects to Ollama for AI-powered responses
+- **Voice Synthesis** - Text-to-speech with custom RVC voice models
+- **GPU Acceleration** - CUDA support for fast voice generation
+- **Multiple Voices** - Supports multiple character voices
+- **Discord Voice Playback** - Plays generated audio directly in voice channels
 
-Additionally, this project interfaces with Applio, in order to generate audio based on the text provided by the LLM.
-- https://github.com/IAHispano/Applio/releases
+## Prerequisites
 
-And of course as a Discord bot, this project requires a Discord bot token and you will also need to add the bot to your server. Some relevant information regarding this can be found at the following link
-- https://discord.com/developers/docs/quick-start/getting-started#step-1-creating-an-app
+Before installing, ensure you have the following:
 
-To prepare Ollama, in a terminal window run the following command
+- **Node.js** >= 22.12.0 (recommend using [nvm](https://github.com/nvm-sh/nvm) or [nvm-windows](https://github.com/coreybutler/nvm-windows))
+- **Python** 3.12.x (recommend using [pyenv](https://github.com/pyenv/pyenv) or [pyenv-win](https://github.com/pyenv-win/pyenv-win))
+- **pipenv** - Python dependency management (`pip install pipenv`)
+- **Ollama** - Local LLM server ([download](https://ollama.com/download))
+- **NVIDIA GPU** with CUDA support (recommended for TTS performance)
+- **Discord Bot Token** - [Create a Discord app](https://discord.com/developers/docs/quick-start/getting-started)
+
+## Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone git@github.com:galvin-SH/knowitall-bot.git
+cd knowitall-bot
 ```
+
+### 2. Install Node.js Dependencies
+
+```bash
+npm install
+```
+
+### 3. Set Up the TTS+RVC Server
+
+```bash
+cd tts_rvc_server
+
+# Install Python dependencies
+pipenv install
+
+# Install PyTorch with CUDA support (for GPU acceleration)
+pipenv run pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+```
+
+### 4. Add RVC Voice Models
+
+Place your RVC model files in `tts_rvc_server/models/`:
+
+```
+tts_rvc_server/models/
+├── model-1.pth
+├── model-1.index
+├── model-2.pth
+├── model-2.index
+├── model-3.pth
+└── model-3.index
+```
+
+Each voice requires a `.pth` model file and a corresponding `.index` file.
+
+### 5. Configure Environment Variables
+
+Create a `.env` file in the project root:
+
+```env
+DISCORD_TOKEN="your_discord_bot_token"
+OLLAMA_MODEL="llama3.2"
+VOICE_MODEL="model-1"
+DISCORD_GUILD_ID="your_server_id"
+DISCORD_CHANNEL_ID="your_voice_channel_id"
+MY_DISCORD_ID="your_discord_user_id"
+```
+
+| Variable | Description |
+|----------|-------------|
+| `DISCORD_TOKEN` | Your Discord bot token |
+| `OLLAMA_MODEL` | Ollama model name (e.g., "llama3.2", "mistral") |
+| `VOICE_MODEL` | Voice to use: "model-1", "model-2", or "model-3" |
+| `DISCORD_GUILD_ID` | Discord server ID where the bot operates |
+| `DISCORD_CHANNEL_ID` | Voice channel ID for audio playback |
+| `MY_DISCORD_ID` | Your Discord user ID (bypasses voice channel requirement) |
+
+## Usage
+
+### Start Ollama
+
+```bash
 ollama serve
 ```
-To prepare Applio, run the `run-applio.bat` file in Applio's root directory
 
-After ensuring both Ollama and Applio are installed and running, the following steps can be taken to install the bot
-1. Clone this repository
->```git clone git@github.com:galvin-SH/knowitall-bot.git```
-2. Install node dependencies
->```npm install```
-3. Create a .env file in the root directory of the project including the following fields
-```
-DISCORD_TOKEN={Your discord bot token}
-OLLAMA_MODEL={The name of the model Ollama will use to generate responses}
-VOICE_MODEL={The name of the model Applio will use to generate audio}
-DISCORD_GUILD_ID={The ID of the discord server the bot will be used in}
-DISCORD_CHANNEL_ID={The ID of the voice channel that the bot will play audio in}
-```
-All of these variables are required for the bot to function correctly and should all be in string format enclosed in quotes
+### Start the TTS+RVC Server
 
-4. Open a terminal window in the root directory of the project and run the following command
->```npm run start```
-5. The bot can now be used in the discord server it was added to.
-- Join the voice channel that the bot was assigned to in the .env file
-- Send the bot a message by typing a message that includes a 'mention' of the bot, for example `@knowitall-bot hello` or by replying to a message the bot has sent in the past.
-- The bot should the join the voice channel, reply to the message in the channel it was sent in and play the audio response in the voice channel it was assigned to.
+```bash
+cd tts_rvc_server
+pipenv run uvicorn server:app --host 127.0.0.1 --port 5050
+```
+
+### Start the Discord Bot
+
+```bash
+npm run start
+```
+
+### Interacting with the Bot
+
+1. Join the voice channel specified in `DISCORD_CHANNEL_ID`
+2. Mention the bot in a text channel: `@knowitall-bot hello!`
+3. The bot will:
+   - Join the voice channel
+   - Generate a response using Ollama
+   - Reply in the text channel
+   - Play the TTS audio in the voice channel
+
+## Project Structure
+
+```
+knowitall-bot/
+├── src/
+│   ├── index.js          # Main entry point and event handlers
+│   ├── client.js         # Discord client configuration
+│   ├── context.js        # Conversation history management
+│   ├── ollama.js         # Ollama LLM integration
+│   ├── tts.js            # TTS server client
+│   └── voiceConnection.js # Discord voice channel management
+├── tts_rvc_server/
+│   ├── server.py         # FastAPI TTS+RVC server
+│   ├── Pipfile           # Python dependencies
+│   ├── models/           # RVC voice models (.pth, .index)
+│   └── output/           # Generated audio files
+├── .env                  # Environment variables (create this)
+├── package.json          # Node.js dependencies
+└── README.md
+```
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run start` | Start the Discord bot |
+| `npm run lint` | Check for linting errors |
+| `npm run lint:fix` | Auto-fix linting errors |
+
+## Troubleshooting
+
+### TTS Server Won't Start
+- Ensure Python 3.12.x is active: `python --version`
+- Verify pipenv environment: `pipenv --venv`
+- Check CUDA availability: `python -c "import torch; print(torch.cuda.is_available())"`
+
+### Bot Can't Connect to Voice
+- Ensure `@discordjs/voice` and `@snazzah/davey` are installed
+- Verify `DISCORD_CHANNEL_ID` is correct
+- Check bot has permission to join voice channels
+
+### No Audio Playback
+- Confirm TTS server is running on port 5050
+- Check model files exist in `tts_rvc_server/models/`
+- Verify `VOICE_MODEL` matches an available voice
 
 ## License
-This project is licenced under [MIT License](https://choosealicense.com/licenses/mit)
+
+This project is licensed under the [MIT License](https://choosealicense.com/licenses/mit).
 
 ## Contributing
-This project is not currently seeking any collaborators
 
-## Tests
-This project does not currently implement any test functionality
+This project is not currently seeking collaborators.
 
 ## Questions
-If you have any questions or concerns regarding this project, I can be contacted via email at the following address
 
-Additionally my github profile can be located by using the following link
-https://github.com/galvin-sh
+If you have any questions or concerns regarding this project, please open an issue or contact me via GitHub.
+
+- GitHub: [galvin-sh](https://github.com/galvin-sh)
