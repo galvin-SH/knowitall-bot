@@ -1,10 +1,21 @@
+/**
+ * @fileoverview Discord client configuration and initialization.
+ * @module client
+ */
+
 import { Client, IntentsBitField } from 'discord.js';
 
+/**
+ * Creates and returns a configured Discord.js client instance.
+ *
+ * @returns {Client} Configured Discord.js client with required gateway intents
+ * @throws {Error} If client creation fails
+ *
+ * @see {@link https://discord.com/developers/docs/topics/gateway#gateway-intents}
+ */
 export function getClient() {
     try {
         return new Client({
-            // Enable the required gateway intents
-            // https://discord.com/developers/docs/topics/gateway#gateway-intents
             intents: [
                 IntentsBitField.Flags.Guilds,
                 IntentsBitField.Flags.GuildMessages,

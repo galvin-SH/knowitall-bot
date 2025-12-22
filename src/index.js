@@ -1,5 +1,9 @@
-// Define the main entry point for the bot
-// Import the necessary modules and load environment variables
+/**
+ * @fileoverview Main entry point for the Discord bot.
+ * Handles message events, LLM responses, and voice playback.
+ * @module index
+ */
+
 import 'dotenv/config.js';
 import { getClient } from './client.js';
 import { getOllama, sendRequest } from './ollama.js';
@@ -12,48 +16,60 @@ import {
     StreamType,
     NoSubscriberBehavior,
 } from '@discordjs/voice';
-import { generateTTS } from './gradio.js';
+import { generateTTS } from './tts.js';
 
-// Define the client, Ollama, and context instances
+/** @constant {RegExp} MENTION_REGEX - Pattern to match Discord user mentions */
+const MENTION_REGEX = /(<+@)+[0-9]+>/g;
+
+/** @constant {string} BOT_OWNER_ID - Discord user ID of the bot owner (bypasses voice channel check) */
+const BOT_OWNER_ID = process.env.MY_DISCORD_ID;
+
+/** @constant {number} MAX_MESSAGE_LENGTH - Maximum characters per Discord message */
+const MAX_MESSAGE_LENGTH = 1950;
+
 const client = getClient();
 const ollama = getOllama();
 const context = getContext();
 
-// Listen for the ClientReady event
+/**
+ * Handles the ClientReady event when the bot successfully logs in.
+ */
 client.on(Events.ClientReady, () => {
-    // Log the client user's display name to confirm the bot is logged in
     console.log(`Logged in as ${client.user.displayName}!`);
 });
 
-// Listen for the messageCreate event
+/**
+ * Handles incoming messages that mention the bot.
+ * Processes the message through Ollama, generates TTS, and plays audio in voice channel.
+ */
 client.on(Events.MessageCreate, async (message) => {
     try {
-        // Define a mention regex
-        const MENTION_REGEX = /(<+@)+[0-9]+>/g;
         // Ignore messages from bots and messages that don't mention the client
         if (message.author.bot || !message.mentions.has(client.user)) return;
-        // if the message was sent by a user not currently in the bots voice channel, return
-        // unless the user is the bot owner
-        while (message.author.id !== '179088203263770624') {
+
+        // Require users to be in the bot's voice channel (except bot owner)
+        if (message.author.id !== BOT_OWNER_ID) {
             if (
-                // Check if the message author is in the voice channel
-                message.member.voice.channel.id !==
+                message.member.voice.channel?.id !==
                 process.env.DISCORD_CHANNEL_ID
-            )
+            ) {
                 return message.reply(
                     'Please join the voice channel that I am currently in to use this command!'
                 );
+            }
         }
-        // Remove the mention from the message content
-        const content = await message.content.replace(MENTION_REGEX, '');
-        if (!content.trim()) return;
 
-        // Add the message to the context
+        // Extract message content without the mention
+        const content = message.content.replace(MENTION_REGEX, '').trim();
+        if (!content) return;
+
+        // Add user message to context
         await addContext(context, {
             role: 'user',
             content: `${message.author.username} said: "${content}"`,
         });
 
+        // Connect to voice channel
         const connection = getConnection(
             client,
             process.env.DISCORD_GUILD_ID,
@@ -62,59 +78,48 @@ client.on(Events.MessageCreate, async (message) => {
         (await connection)
             ? console.log('Connected to the voice channel!')
             : console.error('Failed to connect to the voice channel!');
-        // Create an audio player
+
+        // Create audio player
         const player = createAudioPlayer({
             behaviors: {
                 noSubscriber: NoSubscriberBehavior.Play,
             },
         });
 
-        // Send a request to the Ollama server
+        // Get response from Ollama
         const response = await sendRequest(ollama, context);
-
-        // Add the response to the context window for the model to keep track of the conversation
         await addContext(context, response.message);
 
-        // Define a variable to store the bot message and an array to store the bot messages if the message is too long
-        // Clean up the response by trimming whitespace
         let botMessage = response.message.content.trim();
-        const botMessages = [];
-
-        // If the response is empty, set the bot message to a default message
         if (!botMessage) botMessage = 'Sorry, something went wrong on my end!';
 
-        // Generate the TTS audio
-        await generateTTS(botMessage, process.env.VOICE_MODEL);
-        // Create an audio resource
-        const resource = createAudioResource(
-            'C:/Users/matth/Applio/Applio-3.2.3/assets/audios/tts_rvc_output.wav',
-            {
-                inputType: StreamType.Arbitrary,
-            }
+        // Generate and play TTS audio
+        const audioPath = await generateTTS(
+            botMessage,
+            process.env.VOICE_MODEL
         );
-        // Play the audio resource
+        const resource = createAudioResource(audioPath, {
+            inputType: StreamType.Arbitrary,
+        });
         player.play(resource);
-        // Subscribe the player to the connection
         connection.subscribe(player);
-        // Listen for the audio player state change
+
         player.on('stateChange', (oldState, newState) => {
             console.log(
                 `Audio player transitioned from ${oldState.status} to ${newState.status}`
             );
         });
 
-        // If the message is longer than 1950 characters, find the next space and split it
-        while (botMessage.length > 1950) {
-            let lastSpace = botMessage.lastIndexOf(' ', 1950);
+        // Split long messages to fit Discord's character limit
+        const botMessages = [];
+        while (botMessage.length > MAX_MESSAGE_LENGTH) {
+            const lastSpace = botMessage.lastIndexOf(' ', MAX_MESSAGE_LENGTH);
             botMessages.push(botMessage.substring(0, lastSpace));
             botMessage = botMessage.substring(lastSpace + 1);
         }
-        // Push the remaining message to the array
         botMessages.push(botMessage);
 
-        // Send the bot messages to the channel
-        // Add the index of the message to the message
-        // to keep track of the message count
+        // Send all message chunks to the channel
         for (const msg of botMessages) {
             await message.reply(
                 `${msg} (${botMessages.indexOf(msg) + 1}/${botMessages.length})`
@@ -125,22 +130,27 @@ client.on(Events.MessageCreate, async (message) => {
     }
 });
 
-// Define an async function to start the bot
+/**
+ * Initializes and starts the Discord bot.
+ *
+ * @async
+ * @returns {Promise<void>}
+ */
 async function main() {
-    // Log in to Discord with the client
     await client.login(process.env.DISCORD_TOKEN);
-    // Connect to the Ollama server
+
     (await ollama)
         ? console.log('Connected to the Ollama server!')
         : console.error('Failed to connect to the Ollama server!');
-    // Generate an empty response from the model to load it into memory
+
+    // Pre-load the model into memory
     (await ollama.generate({
         model: process.env.OLLAMA_MODEL,
         keep_alive: 600000,
     }))
         ? console.log('Model loaded successfully!')
         : console.error('Failed to load model!');
-    // Load the context
+
     (await context)
         ? console.log('Context loaded successfully!')
         : console.error('Failed to load context!');

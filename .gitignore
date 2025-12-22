@@ -149,7 +149,17 @@ tts_rvc_output.wav
 config.local.js
 config.local.json
 
+# TTS+RVC Server
+tts_rvc_server/models/*.pth
+tts_rvc_server/models/*.index
+tts_rvc_server/output/
+tts_rvc_server/*.pt
+__pycache__/
+*.pyc
+.venv/
+venv/
+
 #Other
 notes.txt
-.claude/settings.local.json
+.claude/
 CLAUDE.md
