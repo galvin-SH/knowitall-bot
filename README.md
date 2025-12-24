@@ -82,25 +82,94 @@ Each voice requires a `.pth` model file and a corresponding `.index` file.
 
 ### 5. Configure Environment Variables
 
-Create a `.env` file in the project root:
+Copy the example environment file and customize it:
 
-```env
-DISCORD_TOKEN="your_discord_bot_token"
-OLLAMA_MODEL="llama3.2"
-VOICE_MODEL="model-1"
-DISCORD_GUILD_ID="your_server_id"
-DISCORD_CHANNEL_ID="your_voice_channel_id"
-MY_DISCORD_ID="your_discord_user_id"
+```bash
+cp .env.example .env
 ```
 
-| Variable | Description |
-|----------|-------------|
-| `DISCORD_TOKEN` | Your Discord bot token |
-| `OLLAMA_MODEL` | Ollama model name (e.g., "llama3.2", "mistral") |
-| `VOICE_MODEL` | Voice to use: "model-1", "model-2", or "model-3" |
-| `DISCORD_GUILD_ID` | Discord server ID where the bot operates |
-| `DISCORD_CHANNEL_ID` | Voice channel ID for audio playback |
-| `MY_DISCORD_ID` | Your Discord user ID (bypasses voice channel requirement) |
+Edit `.env` with your values:
+
+```env
+# Discord Bot Configuration
+DISCORD_TOKEN=your_discord_bot_token
+DISCORD_GUILD_ID=your_server_id
+DISCORD_CHANNEL_ID=your_voice_channel_id
+
+# Ollama Configuration
+OLLAMA_MODEL=llama3.2
+OLLAMA_HOST=localhost
+OLLAMA_PORT=11434
+
+# Voice Configuration
+VOICE_MODEL=model-1
+
+# TTS+RVC Server Configuration
+TTS_SERVER_URL=http://127.0.0.1:5050
+TTS_HOST=127.0.0.1
+TTS_PORT=5050
+RVC_DEVICE=cuda:0
+```
+
+#### Environment Variable Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISCORD_TOKEN` | (required) | Your Discord bot token |
+| `DISCORD_GUILD_ID` | (required) | Discord server ID where the bot operates |
+| `DISCORD_CHANNEL_ID` | (required) | Voice channel ID for audio playback |
+| `OLLAMA_MODEL` | (required) | Ollama model name (e.g., "llama3.2", "mistral") |
+| `OLLAMA_HOST` | `localhost` | Ollama server hostname |
+| `OLLAMA_PORT` | `11434` | Ollama server port |
+| `VOICE_MODEL` | (required) | Voice to use (must match a voice in `voice_config.json`) |
+| `TTS_SERVER_URL` | `http://127.0.0.1:5050` | TTS server URL for the Discord bot |
+| `TTS_HOST` | `127.0.0.1` | TTS server bind address |
+| `TTS_PORT` | `5050` | TTS server port |
+| `RVC_DEVICE` | `cuda:0` | PyTorch device (`cuda:0`, `cuda:1`, or `cpu`) |
+
+### 6. Configure Voice Models
+
+Copy the example voice configuration and customize it:
+
+```bash
+cp tts_rvc_server/voice_config.example.json tts_rvc_server/voice_config.json
+```
+
+Edit `voice_config.json` to define your voices:
+
+```json
+{
+  "voices": {
+    "model-1": {
+      "pth_file": "model-1.pth",
+      "index_file": "model-1.index",
+      "edge_voice": "en-US-AvaMultilingualNeural",
+      "tts_rate": 0,
+      "pitch": 0,
+      "filter_radius": 3,
+      "index_rate": 0.75,
+      "protect": 0.5,
+      "clean_audio": true,
+      "clean_strength": 0.5
+    }
+  }
+}
+```
+
+#### Voice Configuration Parameters
+
+| Parameter | Description |
+|-----------|-------------|
+| `pth_file` | RVC model file name (in `models/` directory) |
+| `index_file` | RVC index file name (in `models/` directory) |
+| `edge_voice` | Microsoft Edge TTS voice for base audio |
+| `tts_rate` | Speech rate adjustment (-100 to 100) |
+| `pitch` | Pitch shift in semitones |
+| `filter_radius` | Median filtering radius (0-7, reduces breathiness) |
+| `index_rate` | How much to use the index file (0.0-1.0) |
+| `protect` | Protect voiceless consonants (0.0-0.5) |
+| `clean_audio` | Whether to apply noise reduction |
+| `clean_strength` | Noise reduction strength (0.0-1.0) |
 
 ## Usage
 
@@ -145,11 +214,14 @@ knowitall-bot/
 │   ├── tts.js            # TTS server client
 │   └── voiceConnection.js # Discord voice channel management
 ├── tts_rvc_server/
-│   ├── server.py         # FastAPI TTS+RVC server
-│   ├── Pipfile           # Python dependencies
-│   ├── models/           # RVC voice models (.pth, .index)
-│   └── output/           # Generated audio files
-├── .env                  # Environment variables (create this)
+│   ├── server.py              # FastAPI TTS+RVC server
+│   ├── voice_config.example.json  # Voice config template
+│   ├── voice_config.json      # Your voice config (gitignored)
+│   ├── Pipfile                # Python dependencies
+│   ├── models/                # RVC voice models (.pth, .index)
+│   └── output/                # Generated audio files
+├── .env.example          # Environment variable template
+├── .env                  # Your environment config (gitignored)
 ├── package.json          # Node.js dependencies
 └── README.md
 ```
@@ -177,7 +249,12 @@ knowitall-bot/
 ### No Audio Playback
 - Confirm TTS server is running on port 5050
 - Check model files exist in `tts_rvc_server/models/`
-- Verify `VOICE_MODEL` matches an available voice
+- Verify `VOICE_MODEL` matches a voice defined in `voice_config.json`
+- Ensure `voice_config.json` exists (copy from `voice_config.example.json`)
+
+### TTS Server Config Not Found
+- Copy the example config: `cp tts_rvc_server/voice_config.example.json tts_rvc_server/voice_config.json`
+- Edit `voice_config.json` to match your model file names
 
 ## License
 
