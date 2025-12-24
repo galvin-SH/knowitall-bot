@@ -154,6 +154,7 @@ tts_rvc_server/models/*.pth
 tts_rvc_server/models/*.index
 tts_rvc_server/output/
 tts_rvc_server/*.pt
+tts_rvc_server/voice_config.json
 __pycache__/
 *.pyc
 .venv/

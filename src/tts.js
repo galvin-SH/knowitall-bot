@@ -4,7 +4,7 @@
  */
 
 /** @constant {string} TTS_SERVER_URL - Base URL for the TTS+RVC server */
-const TTS_SERVER_URL = 'http://127.0.0.1:5050';
+const TTS_SERVER_URL = process.env.TTS_SERVER_URL || 'http://127.0.0.1:5050';
 
 /**
  * Generates TTS audio with RVC voice conversion.

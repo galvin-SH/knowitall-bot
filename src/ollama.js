@@ -15,15 +15,21 @@ import { getContext } from './context.js';
  * @property {ContextMessage} message - The assistant's response message
  */
 
+/** @constant {string} OLLAMA_HOST - Ollama server hostname */
+const OLLAMA_HOST = process.env.OLLAMA_HOST || 'localhost';
+
+/** @constant {number} OLLAMA_PORT - Ollama server port */
+const OLLAMA_PORT = parseInt(process.env.OLLAMA_PORT || '11434', 10);
+
 /**
  * Creates and returns an Ollama client instance.
  *
- * @returns {Ollama} Ollama client connected to localhost:11434
+ * @returns {Ollama} Ollama client connected to configured host:port
  * @throws {Error} If connection to Ollama server fails
  */
 export function getOllama() {
     try {
-        return new Ollama({ host: 'localhost', port: 11434 });
+        return new Ollama({ host: OLLAMA_HOST, port: OLLAMA_PORT });
     } catch (error) {
         console.error(error);
     }

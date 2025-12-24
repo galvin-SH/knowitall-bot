@@ -7,61 +7,74 @@ Usage:
 
     Or directly:
     python server.py
+
+Environment Variables:
+    VOICE_CONFIG_PATH - Path to voice_config.json (default: ./voice_config.json)
+    MODELS_DIR - Path to models directory (default: ./models)
+    OUTPUT_DIR - Path to output directory (default: ./output)
+    RVC_DEVICE - PyTorch device for RVC inference (default: cuda:0)
+    TTS_HOST - Server host address (default: 127.0.0.1)
+    TTS_PORT - Server port (default: 5050)
 """
 
+import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from tts_with_rvc import TTS_RVC
 
-# Configuration
-MODELS_DIR = Path(__file__).parent / "models"
-OUTPUT_DIR = Path(__file__).parent / "output"
+# Configuration (can be overridden via environment variables)
+SERVER_DIR = Path(__file__).parent
+MODELS_DIR = Path(os.environ.get("MODELS_DIR", SERVER_DIR / "models"))
+OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", SERVER_DIR / "output"))
 OUTPUT_FILE = OUTPUT_DIR / "tts_rvc_output.wav"
+VOICE_CONFIG_PATH = Path(
+    os.environ.get("VOICE_CONFIG_PATH", SERVER_DIR / "voice_config.json")
+)
+RVC_DEVICE = os.environ.get("RVC_DEVICE", "cuda:0")
+TTS_HOST = os.environ.get("TTS_HOST", "127.0.0.1")
+TTS_PORT = int(os.environ.get("TTS_PORT", "5050"))
 
 # Ensure output directory exists
 OUTPUT_DIR.mkdir(exist_ok=True)
 
-# Voice configurations
-VOICE_CONFIG = {
-    "march": {
-        "pth_path": MODELS_DIR / "march72.0.pth",
-        "index_path": MODELS_DIR / "march72.0.index",
-        "edge_voice": "en-US-AvaMultilingualNeural",
-        "tts_rate": -5,
-        "pitch": 9,
-        "filter_radius": 3,
-        "index_rate": 0.5,
-        "protect": 0.459,
-        "clean_audio": True,
-        "clean_strength": 0.25,
-    },
-    "ranni": {
-        "pth_path": MODELS_DIR / "ranni.pth",
-        "index_path": MODELS_DIR / "ranni.index",
-        "edge_voice": "en-GB-SoniaNeural",
-        "tts_rate": -10,
-        "pitch": 0,
-        "filter_radius": 3,
-        "index_rate": 0.75,
-        "protect": 0.426,
-        "clean_audio": True,
-        "clean_strength": 0.5,
-    },
-    "trump": {
-        "pth_path": MODELS_DIR / "trump.pth",
-        "index_path": MODELS_DIR / "trump.index",
-        "edge_voice": "en-US-AndrewMultilingualNeural",
-        "tts_rate": 0,
-        "pitch": 0,
-        "filter_radius": 3,
-        "index_rate": 0.75,
-        "protect": 0.426,
-        "clean_audio": True,
-        "clean_strength": 0.5,
-    },
-}
+
+def load_voice_config() -> dict:
+    """Load voice configuration from JSON file and resolve paths."""
+    if not VOICE_CONFIG_PATH.exists():
+        example_path = SERVER_DIR / "voice_config.example.json"
+        raise FileNotFoundError(
+            f"Voice config file not found: {VOICE_CONFIG_PATH}\n"
+            f"Copy the example config and customize it:\n"
+            f"  cp {example_path} {VOICE_CONFIG_PATH}"
+        )
+
+    with open(VOICE_CONFIG_PATH, "r", encoding="utf-8") as f:
+        raw_config = json.load(f)
+
+    # Convert relative file names to full paths
+    voice_config = {}
+    for voice_name, config in raw_config.get("voices", {}).items():
+        voice_config[voice_name] = {
+            "pth_path": MODELS_DIR / config["pth_file"],
+            "index_path": MODELS_DIR / config["index_file"],
+            "edge_voice": config["edge_voice"],
+            "tts_rate": config.get("tts_rate", 0),
+            "pitch": config.get("pitch", 0),
+            "filter_radius": config.get("filter_radius", 3),
+            "index_rate": config.get("index_rate", 0.75),
+            "protect": config.get("protect", 0.5),
+            "clean_audio": config.get("clean_audio", True),
+            "clean_strength": config.get("clean_strength", 0.5),
+        }
+
+    return voice_config
+
+
+# Load voice configurations from external file
+VOICE_CONFIG = load_voice_config()
 
 # Pre-loaded models (lazy loading)
 models: dict[str, TTS_RVC] = {}
@@ -72,6 +85,7 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
     print("TTS+RVC Server starting...")
+    print(f"Voice config: {VOICE_CONFIG_PATH}")
     print(f"Models directory: {MODELS_DIR}")
     print(f"Output directory: {OUTPUT_DIR}")
 
@@ -107,11 +121,11 @@ def get_model(voice: str) -> TTS_RVC:
         if not config["index_path"].exists():
             raise FileNotFoundError(f"Index file not found: {config['index_path']}")
 
-        print(f"Loading model: {voice}...")
+        print(f"Loading model: {voice} on {RVC_DEVICE}...")
         models[voice] = TTS_RVC(
             model_path=str(config["pth_path"]),
             index_path=str(config["index_path"]),
-            device="cuda:0",  # Use GPU
+            device=RVC_DEVICE,
         )
         print(f"Model loaded: {voice}")
 
@@ -202,4 +216,4 @@ async def generate_tts(request: TTSRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=5050)
+    uvicorn.run(app, host=TTS_HOST, port=TTS_PORT)
