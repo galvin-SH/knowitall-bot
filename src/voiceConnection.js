@@ -4,6 +4,7 @@
  */
 
 import { joinVoiceChannel } from '@discordjs/voice';
+import logger from './logger.js';
 
 /**
  * @typedef {import('discord.js').Client} Client
@@ -27,6 +28,6 @@ export function getConnection(client, guild, channel) {
             adapterCreator: client.guilds.cache.get(guild).voiceAdapterCreator,
         });
     } catch (error) {
-        console.error(error);
+        logger.error(error);
     }
 }

@@ -26,7 +26,8 @@
         "discord.js": "^14.15.3",
         "dotenv": "^16.4.5",
         "libsodium-wrappers": "^0.7.15",
-        "ollama": "^0.5.1"
+        "ollama": "^0.5.1",
+        "winston": "^3.19.0"
     },
     "devDependencies": {
         "eslint": "^9.38.0"

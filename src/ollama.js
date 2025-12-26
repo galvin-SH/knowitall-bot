@@ -5,6 +5,7 @@
 
 import { Ollama } from 'ollama';
 import { getContext } from './context.js';
+import logger from './logger.js';
 
 /**
  * @typedef {import('./context.js').ContextMessage} ContextMessage
@@ -31,7 +32,7 @@ export function getOllama() {
     try {
         return new Ollama({ host: OLLAMA_HOST, port: OLLAMA_PORT });
     } catch (error) {
-        console.error(error);
+        logger.error(error);
     }
 }
 
@@ -53,6 +54,6 @@ export async function sendRequest(ollama, context) {
             stream: false,
         });
     } catch (error) {
-        console.error(error);
+        logger.error(error);
     }
 }

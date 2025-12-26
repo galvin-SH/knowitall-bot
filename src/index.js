@@ -17,6 +17,7 @@ import {
     NoSubscriberBehavior,
 } from '@discordjs/voice';
 import { generateTTS } from './tts.js';
+import logger from './logger.js';
 
 /** @constant {RegExp} MENTION_REGEX - Pattern to match Discord user mentions */
 const MENTION_REGEX = /(<+@)+[0-9]+>/g;
@@ -35,7 +36,7 @@ const context = getContext();
  * Handles the ClientReady event when the bot successfully logs in.
  */
 client.on(Events.ClientReady, () => {
-    console.log(`Logged in as ${client.user.displayName}!`);
+    logger.info(`Logged in as ${client.user.displayName}!`);
 });
 
 /**
@@ -76,8 +77,8 @@ client.on(Events.MessageCreate, async (message) => {
             process.env.DISCORD_CHANNEL_ID
         );
         (await connection)
-            ? console.log('Connected to the voice channel!')
-            : console.error('Failed to connect to the voice channel!');
+            ? logger.info('Connected to the voice channel!')
+            : logger.error('Failed to connect to the voice channel!');
 
         // Create audio player
         const player = createAudioPlayer({
@@ -105,7 +106,7 @@ client.on(Events.MessageCreate, async (message) => {
         connection.subscribe(player);
 
         player.on('stateChange', (oldState, newState) => {
-            console.log(
+            logger.debug(
                 `Audio player transitioned from ${oldState.status} to ${newState.status}`
             );
         });
@@ -126,7 +127,7 @@ client.on(Events.MessageCreate, async (message) => {
             );
         }
     } catch (error) {
-        console.error(error);
+        logger.error(error);
     }
 });
 
@@ -140,20 +141,20 @@ async function main() {
     await client.login(process.env.DISCORD_TOKEN);
 
     (await ollama)
-        ? console.log('Connected to the Ollama server!')
-        : console.error('Failed to connect to the Ollama server!');
+        ? logger.info('Connected to the Ollama server!')
+        : logger.error('Failed to connect to the Ollama server!');
 
     // Pre-load the model into memory
     (await ollama.generate({
         model: process.env.OLLAMA_MODEL,
         keep_alive: 600000,
     }))
-        ? console.log('Model loaded successfully!')
-        : console.error('Failed to load model!');
+        ? logger.info('Model loaded successfully!')
+        : logger.error('Failed to load model!');
 
     (await context)
-        ? console.log('Context loaded successfully!')
-        : console.error('Failed to load context!');
+        ? logger.info('Context loaded successfully!')
+        : logger.error('Failed to load context!');
 }
 
-main().catch(console.error);
+main().catch((error) => logger.error(error));

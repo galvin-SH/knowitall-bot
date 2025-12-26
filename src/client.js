@@ -4,6 +4,7 @@
  */
 
 import { Client, IntentsBitField } from 'discord.js';
+import logger from './logger.js';
 
 /**
  * Creates and returns a configured Discord.js client instance.
@@ -24,6 +25,6 @@ export function getClient() {
             ],
         });
     } catch (error) {
-        console.error(error);
+        logger.error(error);
     }
 }

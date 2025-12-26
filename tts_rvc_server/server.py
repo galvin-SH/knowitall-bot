@@ -27,6 +27,7 @@ from pathlib import Path
 # Suppress third-party warnings and configure their loggers before importing them
 warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)  # torch.nn.utils.weight_norm
 
 # Silence noisy third-party loggers
 for noisy_logger in ["fairseq", "tts_with_rvc", "numba", "httpx"]:
