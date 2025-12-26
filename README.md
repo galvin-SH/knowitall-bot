@@ -32,7 +32,7 @@ Before installing, ensure you have the following:
 
 - **Node.js** >= 22.12.0 (recommend using [nvm](https://github.com/nvm-sh/nvm) or [nvm-windows](https://github.com/coreybutler/nvm-windows))
 - **Python** 3.12.x (recommend using [pyenv](https://github.com/pyenv/pyenv) or [pyenv-win](https://github.com/pyenv-win/pyenv-win))
-- **pipenv** - Python dependency management (`pip install pipenv`)
+- **uv** - Fast Python package manager ([install](https://docs.astral.sh/uv/getting-started/installation/))
 - **Ollama** - Local LLM server ([download](https://ollama.com/download))
 - **NVIDIA GPU** with CUDA support (recommended for TTS performance)
 - **Discord Bot Token** - [Create a Discord app](https://discord.com/developers/docs/quick-start/getting-started)
@@ -57,12 +57,11 @@ npm install
 ```bash
 cd tts_rvc_server
 
-# Install Python dependencies
-pipenv install
-
-# Install PyTorch with CUDA support (for GPU acceleration)
-pipenv run pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+# Install Python dependencies (includes PyTorch with CUDA 12.8 support)
+uv sync
 ```
+
+> **Note:** The `pyproject.toml` is pre-configured to install PyTorch with CUDA 12.8 support for GPU acceleration.
 
 ### 4. Add RVC Voice Models
 
@@ -183,7 +182,7 @@ ollama serve
 
 ```bash
 cd tts_rvc_server
-pipenv run uvicorn server:app --host 127.0.0.1 --port 5050
+uv run uvicorn server:app --host 127.0.0.1 --port 5050
 ```
 
 ### Start the Discord Bot
@@ -217,7 +216,8 @@ knowitall-bot/
 │   ├── server.py              # FastAPI TTS+RVC server
 │   ├── voice_config.example.json  # Voice config template
 │   ├── voice_config.json      # Your voice config (gitignored)
-│   ├── Pipfile                # Python dependencies
+│   ├── pyproject.toml         # Python dependencies (uv)
+│   ├── uv.lock                # Locked dependency versions
 │   ├── models/                # RVC voice models (.pth, .index)
 │   └── output/                # Generated audio files
 ├── .env.example          # Environment variable template
@@ -238,8 +238,9 @@ knowitall-bot/
 
 ### TTS Server Won't Start
 - Ensure Python 3.12.x is active: `python --version`
-- Verify pipenv environment: `pipenv --venv`
-- Check CUDA availability: `python -c "import torch; print(torch.cuda.is_available())"`
+- Verify uv environment exists: `ls .venv` (in `tts_rvc_server/`)
+- Check CUDA availability: `uv run python -c "import torch; print(torch.cuda.is_available())"`
+- Reinstall dependencies: `uv sync --reinstall`
 
 ### Bot Can't Connect to Voice
 - Ensure `@discordjs/voice` and `@snazzah/davey` are installed
