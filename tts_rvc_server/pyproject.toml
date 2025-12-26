@@ -1,0 +1,26 @@
+[project]
+name = "tts-rvc-server"
+version = "0.1.0"
+description = "TTS + RVC voice synthesis server"
+requires-python = ">=3.12"
+dependencies = [
+    "torch",
+    "torchaudio",
+    "tts-with-rvc>=0.1.9",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff",
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
