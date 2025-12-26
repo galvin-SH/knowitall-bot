@@ -18,12 +18,26 @@ Environment Variables:
 """
 
 import json
+import logging
 import os
+import warnings
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from tts_with_rvc import TTS_RVC
+
+# Suppress third-party warnings and configure their loggers before importing them
+warnings.filterwarnings("ignore", message="pkg_resources is deprecated")
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# Silence noisy third-party loggers
+for noisy_logger in ["fairseq", "tts_with_rvc", "numba", "httpx"]:
+    logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
+from fastapi import FastAPI, HTTPException  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
+from tts_with_rvc import TTS_RVC  # noqa: E402
+
+# Use uvicorn's logger for consistent formatting
+logger = logging.getLogger("uvicorn.error")
 
 # Configuration (can be overridden via environment variables)
 SERVER_DIR = Path(__file__).parent
@@ -84,21 +98,21 @@ models: dict[str, TTS_RVC] = {}
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup and shutdown events."""
     # Startup
-    print("TTS+RVC Server starting...")
-    print(f"Voice config: {VOICE_CONFIG_PATH}")
-    print(f"Models directory: {MODELS_DIR}")
-    print(f"Output directory: {OUTPUT_DIR}")
+    logger.info("TTS+RVC Server starting...")
+    logger.info("Voice config: %s", VOICE_CONFIG_PATH)
+    logger.info("Models directory: %s", MODELS_DIR)
+    logger.info("Output directory: %s", OUTPUT_DIR)
 
     if not MODELS_DIR.exists():
-        print("WARNING: Models directory does not exist!")
+        logger.warning("Models directory does not exist!")
     else:
         model_files = list(MODELS_DIR.glob("*.pth"))
-        print(f"Found {len(model_files)} model files: {[f.name for f in model_files]}")
+        logger.info("Found %d model files: %s", len(model_files), [f.name for f in model_files])
 
-    print("Server ready!")
+    logger.info("Server ready!")
     yield
     # Shutdown (cleanup if needed)
-    print("TTS+RVC Server shutting down...")
+    logger.info("TTS+RVC Server shutting down...")
 
 
 # FastAPI app
@@ -121,13 +135,13 @@ def get_model(voice: str) -> TTS_RVC:
         if not config["index_path"].exists():
             raise FileNotFoundError(f"Index file not found: {config['index_path']}")
 
-        print(f"Loading model: {voice} on {RVC_DEVICE}...")
+        logger.info("Loading model: %s on %s...", voice, RVC_DEVICE)
         models[voice] = TTS_RVC(
             model_path=str(config["pth_path"]),
             index_path=str(config["index_path"]),
             device=RVC_DEVICE,
         )
-        print(f"Model loaded: {voice}")
+        logger.info("Model loaded: %s", voice)
 
     return models[voice]
 
@@ -208,8 +222,10 @@ async def generate_tts(request: TTSRequest):
         )
 
     except FileNotFoundError as e:
+        logger.error("File not found: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
+        logger.error("TTS generation failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
 
 

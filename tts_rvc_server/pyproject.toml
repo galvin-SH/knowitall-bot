@@ -4,16 +4,17 @@ version = "0.1.0"
 description = "TTS + RVC voice synthesis server"
 requires-python = ">=3.12"
 dependencies = [
-    "torch",
-    "torchaudio",
-    "tts-with-rvc>=0.1.9",
-    "fastapi>=0.104.0",
-    "uvicorn>=0.24.0",
+    "torch==2.9.1",
+    "torchaudio==2.9.1",
+    "tts-with-rvc==0.1.9.2",
+    "fastapi==0.127.1",
+    "uvicorn==0.40.0",
+    "setuptools<81",  # Pin to avoid pkg_resources removal until tts-with-rvc updates librosa
 ]
 
 [dependency-groups]
 dev = [
-    "ruff",
+    "ruff==0.14.10",
 ]
 
 [[tool.uv.index]]
