@@ -73,14 +73,25 @@ def load_voice_config() -> dict:
     voice_config = {}
     for voice_name, config in raw_config.get("voices", {}).items():
         voice_config[voice_name] = {
+            # Required files
             "pth_path": MODELS_DIR / config["pth_file"],
             "index_path": MODELS_DIR / config["index_file"],
+            # Edge TTS settings
             "edge_voice": config["edge_voice"],
             "tts_rate": config.get("tts_rate", 0),
+            # RVC pitch and voice matching
             "pitch": config.get("pitch", 0),
-            "filter_radius": config.get("filter_radius", 3),
             "index_rate": config.get("index_rate", 0.75),
-            "protect": config.get("protect", 0.5),
+            # Audio quality parameters
+            "filter_radius": config.get("filter_radius", 3),
+            "protect": config.get("protect", 0.33),
+            "rms_mix_rate": config.get("rms_mix_rate", 0.5),
+            "resample_sr": config.get("resample_sr", 0),
+            # Pitch extraction method: rmvpe, crepe, fcpe, pm, harvest, dio
+            "f0_method": config.get("f0_method", "rmvpe"),
+            # Precision: False = full precision (higher quality), True = half (faster)
+            "is_half": config.get("is_half", True),
+            # Post-processing (not passed to RVC, but kept for potential future use)
             "clean_audio": config.get("clean_audio", True),
             "clean_strength": config.get("clean_strength", 0.5),
         }
@@ -136,11 +147,13 @@ def get_model(voice: str) -> TTS_RVC:
         if not config["index_path"].exists():
             raise FileNotFoundError(f"Index file not found: {config['index_path']}")
 
-        logger.info("Loading model: %s on %s...", voice, RVC_DEVICE)
+        logger.info("Loading model: %s on %s (f0_method=%s)...",
+                    voice, RVC_DEVICE, config["f0_method"])
         models[voice] = TTS_RVC(
             model_path=str(config["pth_path"]),
             index_path=str(config["index_path"]),
             device=RVC_DEVICE,
+            f0_method=config["f0_method"],
         )
         logger.info("Model loaded: %s", voice)
 
@@ -209,11 +222,17 @@ async def generate_tts(request: TTSRequest):
         # Generate TTS with RVC
         generated_path = model(
             text=clean_text,
-            pitch=config["pitch"],
+            # Edge TTS settings
             tts_rate=config["tts_rate"],
+            # RVC voice conversion settings
+            pitch=config["pitch"],
             index_rate=config["index_rate"],
             filter_radius=config["filter_radius"],
             protect=config["protect"],
+            rms_mix_rate=config["rms_mix_rate"],
+            resample_sr=config["resample_sr"],
+            is_half=config["is_half"],
+            # Output
             output_filename=str(OUTPUT_FILE),
         )
 

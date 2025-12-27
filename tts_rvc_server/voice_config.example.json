@@ -8,7 +8,11 @@
       "pitch": 0,
       "filter_radius": 3,
       "index_rate": 0.75,
-      "protect": 0.5,
+      "protect": 0.33,
+      "rms_mix_rate": 0.5,
+      "resample_sr": 0,
+      "f0_method": "rmvpe",
+      "is_half": true,
       "clean_audio": true,
       "clean_strength": 0.5
     }
