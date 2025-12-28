@@ -1,0 +1,30 @@
+# Virtual environment (built inside container)
+.venv/
+
+# Cache directories
+.cache/
+.ruff_cache/
+__pycache__/
+*.pyc
+
+# Large model files (mount these at runtime instead)
+*.pt
+*.pth
+*.index
+models/
+
+# Output directory
+output/
+
+# IDE and local config
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Local config (mount at runtime)
+voice_config.json

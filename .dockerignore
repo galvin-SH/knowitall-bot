@@ -1,0 +1,28 @@
+# Dependencies (installed in container)
+node_modules/
+
+# Environment files (mounted or passed via compose)
+.env
+.env.local
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# TTS server (has its own Dockerfile)
+tts_rvc_server/
+
+# Documentation
+README.md
+CLAUDE.md
+LICENSE
+
+# Development
+eslint.config.js
+.claude/

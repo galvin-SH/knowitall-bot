@@ -58,15 +58,26 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 def load_voice_config() -> dict:
     """Load voice configuration from JSON file and resolve paths."""
-    if not VOICE_CONFIG_PATH.exists():
-        example_path = SERVER_DIR / "voice_config.example.json"
-        raise FileNotFoundError(
-            f"Voice config file not found: {VOICE_CONFIG_PATH}\n"
-            f"Copy the example config and customize it:\n"
-            f"  cp {example_path} {VOICE_CONFIG_PATH}"
-        )
+    config_path = VOICE_CONFIG_PATH
+    example_path = SERVER_DIR / "voice_config.example.json"
 
-    with open(VOICE_CONFIG_PATH, "r", encoding="utf-8") as f:
+    # Fall back to example config if main config doesn't exist
+    if not config_path.exists():
+        if example_path.exists():
+            logger.warning(
+                "Voice config not found at %s, using example config. "
+                "Mount your config for production use.",
+                config_path,
+            )
+            config_path = example_path
+        else:
+            raise FileNotFoundError(
+                f"Voice config file not found: {VOICE_CONFIG_PATH}\n"
+                f"Copy the example config and customize it:\n"
+                f"  cp {example_path} {VOICE_CONFIG_PATH}"
+            )
+
+    with open(config_path, "r", encoding="utf-8") as f:
         raw_config = json.load(f)
 
     # Convert relative file names to full paths
@@ -176,12 +187,18 @@ class TTSResponse(BaseModel):
 
 @app.get("/")
 async def root():
-    """Health check endpoint."""
+    """Root endpoint with service info."""
     return {
         "status": "ok",
         "service": "TTS+RVC Server",
         "available_voices": list(VOICE_CONFIG.keys()),
     }
+
+
+@app.get("/health")
+async def health():
+    """Health check endpoint for Docker/Kubernetes."""
+    return {"status": "healthy"}
 
 
 @app.get("/voices")

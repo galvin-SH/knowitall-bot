@@ -1,0 +1,119 @@
+# =============================================================================
+# KnowItAll Bot - Docker Compose
+#
+# Usage:
+#   docker compose up -d              # Start all services
+#   docker compose up -d tts          # Start only TTS server
+#   docker compose logs -f            # Follow logs
+#   docker compose down               # Stop all services
+#
+# Prerequisites:
+#   1. Build the base CUDA image first (one-time):
+#      cd tts_rvc_server && docker build -f Dockerfile.base -t cuda-python:12.8-py312 .
+#
+#   2. Ollama must be running on the host:
+#      ollama serve
+#
+#   3. Copy .env.example to .env and fill in your credentials
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # TTS + RVC Server (GPU-accelerated voice synthesis)
+  # ---------------------------------------------------------------------------
+  tts:
+    build:
+      context: ./tts_rvc_server
+      dockerfile: Dockerfile
+    image: tts-rvc-server:latest
+    container_name: tts-server
+    restart: unless-stopped
+
+    # GPU access
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    ports:
+      - "5050:5050"
+
+    volumes:
+      # Mount model files (large, not included in image)
+      - ./tts_rvc_server/models:/app/models:ro
+      - ./tts_rvc_server/hubert_base.pt:/app/hubert_base.pt:ro
+      - ./tts_rvc_server/rmvpe.pt:/app/rmvpe.pt:ro
+      # Mount config (customize voices)
+      - ./tts_rvc_server/voice_config.json:/app/voice_config.json:ro
+      # Shared output directory (bot reads from here)
+      - tts-output:/app/output
+
+    environment:
+      - RVC_DEVICE=cuda:0
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5050/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ---------------------------------------------------------------------------
+  # Discord Bot (lightweight Node.js)
+  # ---------------------------------------------------------------------------
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: knowitall-bot:latest
+    container_name: discord-bot
+    restart: unless-stopped
+
+    depends_on:
+      tts:
+        condition: service_healthy
+
+    # Allow access to host network for Ollama
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    volumes:
+      # Share TTS output directory so bot can read generated audio files
+      # The path must match what TTS server returns (/app/output/...)
+      - tts-output:/app/output:ro
+
+    environment:
+      # Discord credentials (from .env file)
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_GUILD_ID=${DISCORD_GUILD_ID}
+      - DISCORD_CHANNEL_ID=${DISCORD_CHANNEL_ID}
+
+      # Ollama - running on host machine
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+      - OLLAMA_HOST=host.docker.internal
+      - OLLAMA_PORT=11434
+
+      # TTS server - via Docker network
+      - TTS_SERVER_URL=http://tts:5050
+      - VOICE_MODEL=${VOICE_MODEL:-march}
+
+    # Load additional env vars from file
+    env_file:
+      - .env
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  default:
+    name: knowitall-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  # Shared volume for TTS audio output (TTS writes, bot reads)
+  tts-output:

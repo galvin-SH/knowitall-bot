@@ -11,6 +11,7 @@ A Discord bot that allows users to interact with a locally hosted LLM and receiv
 - [Features](#features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
+- [Docker Deployment](#docker-deployment)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
@@ -170,6 +171,111 @@ Edit `voice_config.json` to define your voices:
 | `clean_audio` | Whether to apply noise reduction |
 | `clean_strength` | Noise reduction strength (0.0-1.0) |
 
+## Docker Deployment
+
+For production deployments or simplified setup, you can run both the TTS server and Discord bot using Docker Compose.
+
+### Docker Prerequisites
+
+- **Docker** with Compose v2 ([Docker Desktop](https://www.docker.com/products/docker-desktop/) recommended)
+- **NVIDIA Container Toolkit** for GPU support ([installation guide](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html))
+  - Docker Desktop on Windows includes this automatically with WSL2
+- **Ollama** running on the host machine (not containerized)
+
+### Quick Start with Docker
+
+```bash
+# 1. Build the CUDA base image (one-time, ~6.8GB)
+cd tts_rvc_server
+docker build -f Dockerfile.base -t cuda-python:12.8-py312 .
+cd ..
+
+# 2. Ensure your .env file is configured (see Configuration section)
+cp .env.example .env
+# Edit .env with your Discord credentials
+
+# 3. Start Ollama on the host
+ollama serve
+
+# 4. Start all services
+docker compose up -d
+```
+
+### Docker Architecture
+
+The `docker-compose.yml` defines two services:
+
+| Service | Description | Image Size |
+|---------|-------------|------------|
+| `tts` | TTS+RVC server with GPU acceleration | ~19GB |
+| `bot` | Discord bot (Node.js) | ~500MB |
+
+**Key Features:**
+- **GPU Passthrough**: The TTS server uses NVIDIA GPU for fast voice synthesis
+- **Shared Volume**: Audio files are shared via a `tts-output` Docker volume
+- **Health Checks**: The bot waits for TTS server to be healthy before starting
+- **Host Network Access**: The bot connects to Ollama on the host via `host.docker.internal`
+
+### Docker Commands
+
+```bash
+# Start all services
+docker compose up -d
+
+# Start only the TTS server
+docker compose up -d tts
+
+# View logs (follow mode)
+docker compose logs -f
+
+# View logs for specific service
+docker compose logs -f bot
+
+# Stop all services
+docker compose down
+
+# Rebuild after code changes
+docker compose build
+docker compose up -d
+
+# Full rebuild (no cache)
+docker compose build --no-cache
+```
+
+### Volume Mounts
+
+The TTS server expects model files to be mounted from the host:
+
+```yaml
+volumes:
+  - ./tts_rvc_server/models:/app/models:ro          # RVC models
+  - ./tts_rvc_server/hubert_base.pt:/app/hubert_base.pt:ro
+  - ./tts_rvc_server/rmvpe.pt:/app/rmvpe.pt:ro
+  - ./tts_rvc_server/voice_config.json:/app/voice_config.json:ro
+```
+
+> **Note:** The `:ro` suffix makes these read-only mounts. Model files are not included in the Docker image due to their size.
+
+### Troubleshooting Docker
+
+**TTS container crashes immediately:**
+- Check logs: `docker compose logs tts`
+- Verify model files exist in `tts_rvc_server/models/`
+- Ensure `voice_config.json` exists (server falls back to example config if missing)
+
+**GPU not detected:**
+- Verify NVIDIA drivers: `nvidia-smi`
+- Check Docker GPU access: `docker run --rm --gpus all nvidia/cuda:12.8.1-runtime-ubuntu22.04 nvidia-smi`
+- Ensure NVIDIA Container Toolkit is installed
+
+**Bot can't connect to Ollama:**
+- Verify Ollama is running: `curl http://localhost:11434/api/tags`
+- The bot uses `host.docker.internal` to reach the host - this should work automatically on Docker Desktop
+
+**Health check failing:**
+- The TTS server has a 60-second startup period for model loading
+- Check if models are loading correctly: `docker compose logs tts`
+
 ## Usage
 
 ### Start Ollama
@@ -214,12 +320,18 @@ knowitall-bot/
 │   └── voiceConnection.js # Discord voice channel management
 ├── tts_rvc_server/
 │   ├── server.py              # FastAPI TTS+RVC server
+│   ├── Dockerfile             # TTS server container (multi-stage build)
+│   ├── Dockerfile.base        # CUDA+Python base image
+│   ├── .dockerignore          # Docker build exclusions
 │   ├── voice_config.example.json  # Voice config template
 │   ├── voice_config.json      # Your voice config (gitignored)
 │   ├── pyproject.toml         # Python dependencies (uv)
 │   ├── uv.lock                # Locked dependency versions
 │   ├── models/                # RVC voice models (.pth, .index)
 │   └── output/                # Generated audio files
+├── Dockerfile            # Discord bot container
+├── docker-compose.yml    # Multi-service orchestration
+├── .dockerignore         # Bot Docker build exclusions
 ├── .env.example          # Environment variable template
 ├── .env                  # Your environment config (gitignored)
 ├── package.json          # Node.js dependencies
